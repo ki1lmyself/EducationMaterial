@@ -1,0 +1,28 @@
+private byte[] sBox = Enumerable.Range(0, 256)
+    .Select(i => (byte)((i * 31 + 7) % 256)).ToArray();
+
+private byte[] Substitute(byte[] data)
+{
+    return data.Select(b => sBox[b]).ToArray();
+}
+
+private byte[] ShiftBits(byte[] data, int shift)
+{
+    return data.Select(b => (byte)((b << shift) | (b >> (8 - shift)))).ToArray();
+}
+
+private byte[] SwapHalves(byte[] data)
+{
+    int half = data.Length / 2;
+    byte[] result = new byte[data.Length];
+    
+    Buffer.BlockCopy(data, half, result, 0, data.Length - half);
+    Buffer.BlockCopy(data, 0, result, data.Length - half, half);
+    
+    return result;
+}
+
+private byte[] XorWithKey(byte[] data, byte[] key)
+{
+    return data.Select((b, i) => (byte)(b ^ key[i % key.Length])).ToArray();
+}

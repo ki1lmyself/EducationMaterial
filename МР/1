@@ -1,0 +1,16 @@
+static private List<char> Charset = new List<char>("ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*()_+");
+static private List<int> Key = new List<int>() {3,7,2,8,9,12,45,24,35,46,74,56,82,12,34,22,72};
+
+public static string SubstituteEncrypt(string plainText, int seed = 55)
+{
+    int keyIndex = seed % Key.Count;
+    var result = new StringBuilder();
+    
+    foreach (char c in plainText)
+    {
+        int position = (Charset.IndexOf(c) + Key[keyIndex]) % Charset.Count;
+        result.Append(Charset[position]);
+        keyIndex = (keyIndex + 1) % Key.Count;
+    }
+    return result.ToString();
+}

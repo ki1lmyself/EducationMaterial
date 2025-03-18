@@ -1,0 +1,41 @@
+public class CustomCipher
+{
+    private byte[] sBox = new byte[256];
+    private byte[] inverseSBox = new byte[256];
+
+    public CustomCipher()
+    {
+        // Инициализация S-Box
+        for (int i = 0; i < 256; i++)
+        {
+            sBox[i] = (byte)((i * 31 + 7) % 256);
+            inverseSBox[sBox[i]] = (byte)i;
+        }
+    }
+
+    public byte[] Encrypt(byte[] data, byte[] key)
+    {
+        data = Substitute(data);
+        data = ShiftBits(data, 3); // Сдвиг на 3 бита
+        data = SwapHalves(data);
+        data = XorWithKey(data, key);
+        return data;
+    }
+
+    public byte[] Decrypt(byte[] data, byte[] key)
+    {
+        data = XorWithKey(data, key);
+        data = SwapHalves(data);
+        data = ShiftBits(data, 5); // Обратный сдвиг (8-3=5)
+        data = SubstituteInverse(data);
+        return data;
+    }
+
+    private byte[] SubstituteInverse(byte[] data)
+    {
+        return data.Select(b => inverseSBox[b]).ToArray();
+    }
+
+    // Остальные методы Substitute, ShiftBits, SwapHalves, XorWithKey
+    // из примеров выше...
+}

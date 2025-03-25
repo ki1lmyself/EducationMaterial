@@ -1,0 +1,56 @@
+private void OpenArchive_Click(object sender, RoutedEventArgs e)
+{
+    var openFileDialog = new OpenFileDialog
+    {
+        Filter = "ZIP-архивы (*.zip)|*.zip"
+    };
+
+    if (openFileDialog.ShowDialog() == true)
+    {
+        try
+        {
+            using (var zipArchive = ZipFile.OpenRead(openFileDialog.FileName))
+            {
+                var contentGrid = new Grid { Margin = new Thickness(0, 25, 0, 0) };
+                var dataGrid = new DataGrid
+                {
+                    AutoGenerateColumns = false,
+                    CanUserAddRows = false,
+                    HeadersVisibility = DataGridHeadersVisibility.Column
+                };
+
+                // Колонки для отображения
+                dataGrid.Columns.Add(new DataGridTextColumn
+                {
+                    Header = "Имя файла",
+                    Binding = new Binding("Name")
+                });
+
+                dataGrid.Columns.Add(new DataGridTextColumn
+                {
+                    Header = "Сжатый размер (байт)",
+                    Binding = new Binding("CompressedLength")
+                });
+
+                // Данные для отображения
+                var entries = zipArchive.Entries
+                    .Where(e => !string.IsNullOrEmpty(e.FullName))
+                    .Select(e => new
+                    {
+                        Name = e.FullName,
+                        CompressedLength = e.CompressedLength
+                    });
+
+                dataGrid.ItemsSource = entries;
+
+                contentGrid.Children.Add(dataGrid);
+                ContentGrid.Children.Clear();
+                ContentGrid.Children.Add(contentGrid);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Ошибка: {ex.Message}");
+        }
+    }
+}

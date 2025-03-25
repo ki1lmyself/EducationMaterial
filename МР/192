@@ -1,0 +1,73 @@
+using System.IO;
+using System.IO.Compression;
+using System.Windows;
+using Microsoft.Win32;
+
+private void AddToArchive_Click(object sender, RoutedEventArgs e)
+{
+    var openFileDialog = new OpenFileDialog
+    {
+        Filter = "Все файлы (*.*)|*.*",
+        Multiselect = true // Множественный выбор файлов
+    };
+
+    if (openFileDialog.ShowDialog() == true)
+    {
+        try
+        {
+            // Открытие архива для добавления файлов
+            var saveFileDialog = new SaveFileDialog
+            {
+                FileName = "archive",
+                DefaultExt = ".zip",
+                Filter = "ZIP-архивы (*.zip)|*.zip"
+            };
+
+            if (saveFileDialog.ShowDialog() == true)
+            {
+                using (var fs = new FileStream(saveFileDialog.FileName, FileMode.Create))
+                {
+                    using (var arch = new ZipArchive(fs, ZipArchiveMode.Create))
+                    {
+                        foreach (var filePath in openFileDialog.FileNames)
+                        {
+                            arch.CreateEntryFromFile(
+                                filePath, 
+                                Path.GetFileName(filePath));
+                        }
+                    }
+                }
+
+                // Отображение содержимого архива
+                UpdateArchiveContent(saveFileDialog.FileName);
+            }
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show($"Ошибка: {ex.Message}");
+        }
+    }
+}
+
+private void UpdateArchiveContent(string archivePath)
+{
+    try
+    {
+        using (var zipArchive = ZipFile.OpenRead(archivePath))
+        {
+            var entries = zipArchive.Entries
+                .Where(e => !string.IsNullOrEmpty(e.FullName))
+                .Select(e => new
+                {
+                    Name = e.FullName,
+                    CompressedLength = e.CompressedLength
+                });
+
+            ArchiveListView.ItemsSource = entries;
+        }
+    }
+    catch (Exception ex)
+    {
+        MessageBox.Show($"Ошибка: {ex.Message}");
+    }
+}

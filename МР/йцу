@@ -1,2 +1,54 @@
-Разработать диспетчер задач с выводом в виде списка, позволяющий как 
-запускать программы, так и принудительно их завершать;
+import subprocess
+import os
+import platform
+
+def list_processes():
+    """Выводит список процессов."""
+    if platform.system() == 'Windows':
+        subprocess.run(['tasklist'])
+    elif platform.system() == 'Linux':
+        subprocess.run(['ps', '-ef'])
+    elif platform.system() == 'Darwin':  # MacOS
+        subprocess.run(['ps', '-ef'])
+
+def run_program(program_path):
+    """Запускает программу."""
+    try:
+        subprocess.Popen(program_path)
+        print(f"Программа '{program_path}' запущена.")
+    except Exception as e:
+        print(f"Ошибка запуска программы: {e}")
+
+def terminate_program(pid):
+    """Принудительно завершает процесс по PID."""
+    if platform.system() == 'Windows':
+        subprocess.run(['taskkill', '/pid', str(pid), '/f'])
+    elif platform.system() == 'Linux' or platform.system() == 'Darwin':
+        subprocess.run(['kill', '-9', str(pid)])
+    print(f"Процесс с PID {pid} завершен.")
+
+def main():
+    while True:
+        print("\nМеню диспетчера задач:")
+        print("1. Вывести список процессов")
+        print("2. Запустить программу")
+        print("3. Завершить процесс")
+        print("4. Выход")
+        
+        choice = input("Выберите действие: ")
+        
+        if choice == "1":
+            list_processes()
+        elif choice == "2":
+            program_path = input("Введите путь к программе: ")
+            run_program(program_path)
+        elif choice == "3":
+            pid = int(input("Введите PID процесса для завершения: "))
+            terminate_program(pid)
+        elif choice == "4":
+            break
+        else:
+            print("Недопустимый выбор. Пожалуйста, выберите действие из меню.")
+
+if __name__ == "__main__":
+    main()

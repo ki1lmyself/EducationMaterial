@@ -1,30 +1,17 @@
-import tkinter as tk
-from tkinter import ttk
-import psutil
+from tkinter import *
 import subprocess
+from tkinter import messagebox
+from tkinter.ttk import Treeview
 
-def get_processes():
-    processes = []
-    for proc in psutil.process_iter(['pid', 'name']):
-        try:
-            processes.append((proc.info['pid'], proc.info['name']))
-        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
-            pass
-    return processes
-
-def update_process_list():
-    for item in process_tree.get_children():
-        process_tree.delete(item)
-    
-    processes = get_processes()
-    for pid, name in processes:
-        process_tree.insert('', 'end', values=(pid, name))
+processes = []
 
 def run_program():
     program_path = program_entry.get()
     if program_path:
         try:
             subprocess.Popen(program_path)
+            processes.append(program_path)
+            update_process_list()
             messagebox.showinfo("Запуск программы", "Программа запущена успешно.")
         except Exception as e:
             messagebox.showerror("Ошибка запуска", str(e))
@@ -32,130 +19,54 @@ def run_program():
 def terminate_process():
     selected_item = process_tree.focus()
     if selected_item:
-        pid = process_tree.item(selected_item)['values'][0]
-        try:
-            proc = psutil.Process(pid)
-            proc.terminate()
-            messagebox.showinfo("Завершение процесса", "Процесс завершен успешно.")
-            update_process_list()
-        except Exception as e:
-            messagebox.showerror("Ошибка завершения", str(e))
+        process_tree.delete(selected_item)
+        messagebox.showinfo("Завершение процесса", "Запись удалена из списка.")
 
-root = tk.Tk()
+def update_process_list():
+    for item in process_tree.get_children():
+        process_tree.delete(item)
+
+    for process in processes:
+        process_tree.insert('', 'end', values=(process,))
+
+root = Tk()
 root.title("Диспетчер задач")
-root.geometry("800x600")
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+root.geometry(f"{screen_width}x{screen_height}+0+0")
 
 # Панель для запуска программы
-run_frame = tk.Frame(root)
-run_frame.pack(fill=tk.X, padx=10, pady=10)
+run_frame = Frame(root)
+run_frame.pack(fill=X, padx=20, pady=20)
 
-program_label = tk.Label(run_frame, text="Путь к программе:")
-program_label.pack(side=tk.LEFT)
+program_label = Label(run_frame, text="Путь к программе:")
+program_label.pack(side=LEFT)
 
-program_entry = tk.Entry(run_frame, width=50)
-program_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
+program_entry = Entry(run_frame)
+program_entry.pack(side=LEFT, fill=X, expand=True)
 
-run_btn = tk.Button(run_frame, text="Запустить", command=run_program)
-run_btn.pack(side=tk.LEFT, padx=10)
+run_btn = Button(run_frame, text="Запустить", command=run_program)
+run_btn.pack(side=LEFT)
 
 # Область вывода процессов
-process_frame = tk.Frame(root)
-process_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+process_frame = Frame(root)
+process_frame.pack(fill=BOTH, expand=True, padx=20, pady=20)
 
-process_tree = ttk.Treeview(process_frame, columns=("PID", "Name"), show="headings")
+process_tree = Treeview(process_frame, columns=("PID", "Name"), show="headings")
 process_tree.column("PID", width=100)
 process_tree.column("Name", width=600)
 process_tree.heading("PID", text="PID")
 process_tree.heading("Name", text="Имя процесса")
-process_tree.pack(fill=tk.BOTH, expand=True)
+process_tree.pack(fill=BOTH, expand=True)
 
 # Кнопка обновления списка процессов
-refresh_btn = tk.Button(process_frame, text="Обновить", command=update_process_list)
-refresh_btn.pack(fill=tk.X)
+refresh_button = Button(process_frame, text="Обновить", command=update_process_list)
+refresh_button.pack(fill=X)
 
 # Кнопка завершения процесса
-terminate_btn = tk.Button(process_frame, text="Завершить процесс", command=terminate_process)
-terminate_btn.pack(fill=tk.X)
+terminate_button = Button(process_frame, text="Завершить процесс", command=terminate_process)
+terminate_button.pack(fill=X)
 
 update_process_list()
 
 root.mainloop()
-
-
-
-
-
-import tkinter as tk
-from tkinter import ttk, messagebox
-import subprocess
-
-class ProcessManager:
-    def __init__(self, root):
-        self.root = root
-        self.processes = []
-        self.init_ui()
-
-    def init_ui(self):
-        # Панель для запуска программы
-        run_frame = tk.Frame(self.root)
-        run_frame.pack(fill=tk.X, padx=10, pady=10)
-
-        program_label = tk.Label(run_frame, text="Путь к программе:")
-        program_label.pack(side=tk.LEFT)
-
-        self.program_entry = tk.Entry(run_frame, width=50)
-        self.program_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
-
-        run_btn = tk.Button(run_frame, text="Запустить", command=self.run_program)
-        run_btn.pack(side=tk.LEFT, padx=10)
-
-        # Область вывода процессов
-        process_frame = tk.Frame(self.root)
-        process_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-
-        self.process_tree = ttk.Treeview(process_frame, columns=("Name",), show="headings")
-        self.process_tree.column("Name", width=600)
-        self.process_tree.heading("Name", text="Имя процесса")
-        self.process_tree.pack(fill=tk.BOTH, expand=True)
-
-        terminate_btn = tk.Button(process_frame, text="Завершить процесс", command=self.terminate_process)
-        terminate_btn.pack(fill=tk.X)
-
-    def run_program(self):
-        program_path = self.program_entry.get()
-        if program_path:
-            try:
-                subprocess.Popen(program_path)
-                self.processes.append(program_path)
-                self.update_process_list()
-                messagebox.showinfo("Запуск программы", "Программа запущена успешно.")
-            except Exception as e:
-                messagebox.showerror("Ошибка запуска", str(e))
-
-    def terminate_process(self):
-        # В этом примере мы не можем завершать процессы напрямую.
-        # Мы можем только удалить запись из списка.
-        selected_item = self.process_tree.focus()
-        if selected_item:
-            self.process_tree.delete(selected_item)
-            messagebox.showinfo("Завершение процесса", "Запись удалена из списка.")
-
-    def update_process_list(self):
-        for item in self.process_tree.get_children():
-            self.process_tree.delete(item)
-        
-        for process in self.processes:
-            self.process_tree.insert('', 'end', values=(process,))
-
-root = tk.Tk()
-root.title("Диспетчер задач")
-root.geometry("800x600")
-
-app = ProcessManager(root)
-
-root.mainloop()
-
-
-
-
-

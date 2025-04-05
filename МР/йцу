@@ -1,198 +1,82 @@
-from tkinter import *
-from tkinter import ttk, filedialog, messagebox
-import os, shutil, glob, datetime
+import tkinter as tk
+from tkinter import ttk
+import psutil
+import subprocess
 
-def select_directory():
-    path = filedialog.askdirectory()
-    path_entry.delete(0, END)
-    path_entry.insert(0, path)
-
-def create_file():
-    path = filedialog.asksaveasfilename()
-    if path:
-        with open(path, 'w') as f:
+def get_processes():
+    processes = []
+    for proc in psutil.process_iter(['pid', 'name']):
+        try:
+            processes.append((proc.info['pid'], proc.info['name']))
+        except (psutil.NoSuchProcess, psutil.AccessDenied, psutil.ZombieProcess):
             pass
-        messagebox.showinfo("Создание файла", "Файл успешно создан.")
+    return processes
 
-def delete_file():
-    path = filedialog.askopenfilename()
-    if path:
-        if os.path.isfile(path):
-            os.remove(path)
-        else:
-            shutil.rmtree(path)
-        messagebox.showinfo("Удаление файла", "Файл успешно удален.")
+def update_process_list():
+    for item in process_tree.get_children():
+        process_tree.delete(item)
+    
+    processes = get_processes()
+    for pid, name in processes:
+        process_tree.insert('', 'end', values=(pid, name))
 
-def search_files():
-    current_dir = path_entry.get()
-    mask = mask_entry.get()
-    min_size = int(min_size_entry.get()) if min_size_entry.get() else 0
-    max_size = int(max_size_entry.get()) if max_size_entry.get() else float('inf')
-    start_date_str = start_date_entry.get()
-    end_date_str = end_date_entry.get()
-    
-    results = []
-    
-    for root_dir, dirs, files in os.walk(current_dir):
-        for file in files:
-            file_path = os.path.join(root_dir, file)
-            if mask and not file.endswith(mask):
-                continue
-            
-            file_size = os.path.getsize(file_path)
-            if min_size <= file_size <= max_size:
-                file_mtime = datetime.datetime.fromtimestamp(os.path.getmtime(file_path))
-                if start_date_str and end_date_str:
-                    start_date = datetime.datetime.strptime(start_date_str, "%Y-%m-%d")
-                    end_date = datetime.datetime.strptime(end_date_str, "%Y-%m-%d")
-                    if start_date <= file_mtime <= end_date:
-                        results.append((file, file_size, file_mtime))
-                else:
-                    results.append((file, file_size, file_mtime))
-            elif not min_size and not max_size:
-                file_mtime = datetime.datetime.fromtimestamp(os.path.getmtime(file_path))
-                if start_date_str and end_date_str:
-                    start_date = datetime.datetime.strptime(start_date_str, "%Y-%m-%d")
-                    end_date = datetime.datetime.strptime(end_date_str, "%Y-%m-%d")
-                    if start_date <= file_mtime <= end_date:
-                        results.append((file, file_size, file_mtime))
-                else:
-                    results.append((file, file_size, file_mtime))
-    
-    update_results(results)
+def run_program():
+    program_path = program_entry.get()
+    if program_path:
+        try:
+            subprocess.Popen(program_path)
+            messagebox.showinfo("Запуск программы", "Программа запущена успешно.")
+        except Exception as e:
+            messagebox.showerror("Ошибка запуска", str(e))
 
-def update_results(results):
-    for item in result_tree.get_children():
-        result_tree.delete(item)
-    
-    for file_info in results:
-        result_tree.insert('', 'end', values=file_info)
+def terminate_process():
+    selected_item = process_tree.focus()
+    if selected_item:
+        pid = process_tree.item(selected_item)['values'][0]
+        try:
+            proc = psutil.Process(pid)
+            proc.terminate()
+            messagebox.showinfo("Завершение процесса", "Процесс завершен успешно.")
+            update_process_list()
+        except Exception as e:
+            messagebox.showerror("Ошибка завершения", str(e))
 
-root = Tk()
-root.title("Advanced File Manager")
+root = tk.Tk()
+root.title("Диспетчер задач")
 root.geometry("800x600")
 
-# Панель навигации
-path_frame = Frame(root)
-path_frame.pack(fill=X, padx=10, pady=10)
+# Панель для запуска программы
+run_frame = tk.Frame(root)
+run_frame.pack(fill=tk.X, padx=10, pady=10)
 
-path_label = Label(path_frame, text="Путь:")
-path_label.pack(side=LEFT)
+program_label = tk.Label(run_frame, text="Путь к программе:")
+program_label.pack(side=tk.LEFT)
 
-path_entry = Entry(path_frame, width=50)
-path_entry.pack(side=LEFT, fill=X, expand=True)
+program_entry = tk.Entry(run_frame, width=50)
+program_entry.pack(side=tk.LEFT, fill=tk.X, expand=True)
 
-browse_btn = Button(path_frame, text="Обзор", command=select_directory)
-browse_btn.pack(side=LEFT, padx=10)
+run_btn = tk.Button(run_frame, text="Запустить", command=run_program)
+run_btn.pack(side=tk.LEFT, padx=10)
 
-# Кнопки операций с файлами
-operations_frame = Frame(root)
-operations_frame.pack(fill=X, padx=10, pady=10)
+# Область вывода процессов
+process_frame = tk.Frame(root)
+process_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
 
-create_btn = Button(operations_frame, text="Создать файл", command=create_file)
-create_btn.pack(side=LEFT, fill=X, expand=True)
+process_tree = ttk.Treeview(process_frame, columns=("PID", "Name"), show="headings")
+process_tree.column("PID", width=100)
+process_tree.column("Name", width=600)
+process_tree.heading("PID", text="PID")
+process_tree.heading("Name", text="Имя процесса")
+process_tree.pack(fill=tk.BOTH, expand=True)
 
-delete_btn = Button(operations_frame, text="Удалить файл", command=delete_file)
-delete_btn.pack(side=LEFT, fill=X, expand=True, padx=10)
+# Кнопка обновления списка процессов
+refresh_btn = tk.Button(process_frame, text="Обновить", command=update_process_list)
+refresh_btn.pack(fill=tk.X)
 
-# Панель поиска
-search_frame = Frame(root)
-search_frame.pack(fill=X, padx=10, pady=10)
+# Кнопка завершения процесса
+terminate_btn = tk.Button(process_frame, text="Завершить процесс", command=terminate_process)
+terminate_btn.pack(fill=tk.X)
 
-mask_label = Label(search_frame, text="Маска:")
-mask_label.pack(side=LEFT)
+update_process_list()
 
-mask_entry = Entry(search_frame, width=10)
-mask_entry.pack(side=LEFT)
-
-min_size_label = Label(search_frame, text="Мин. размер:")
-min_size_label.pack(side=LEFT)
-
-min_size_entry = Entry(search_frame, width=5)
-min_size_entry.pack(side=LEFT)
-
-max_size_label = Label(search_frame, text="Макс. размер:")
-max_size_label.pack(side=LEFT)
-
-max_size_entry = Entry(search_frame, width=5)
-max_size_entry.pack(side=LEFT)
-
-start_date_label = Label(search_frame, text="Дата с:")
-start_date_label.pack(side=LEFT)
-
-start_date_entry = Entry(search_frame, width=10)
-start_date_entry.pack(side=LEFT)
-
-end_date_label = Label(search_frame, text="Дата по:")
-end_date_label.pack(side=LEFT)
-
-end_date_entry = Entry(search_frame, width=10)
-end_date_entry.pack(side=LEFT)
-
-search_btn = Button(search_frame, text="Поиск", command=search_files)
-search_btn.pack(side=LEFT, padx=10)
-
-# Область вывода результатов
-result_frame = Frame(root)
-result_frame.pack(fill=BOTH, expand=True, padx=10, pady=10)
-
-result_tree = ttk.Treeview(result_frame, columns=("Name", "Size", "Modified"), show="headings")
-result_tree.column("Name", width=200)
-result_tree.column("Size", width=100)
-result_tree.column("Modified", width=200)
-result_tree.heading("Name", text="Имя файла")
-result_tree.heading("Size", text="Размер")
-result_tree.heading("Modified", text="Дата изменения")
-result_tree.pack(fill=BOTH, expand=True)
-
-root.mainloop()
-
-
-
-def edit_file():
-    path = filedialog.askopenfilename()
-    if path:
-        # Открываем файл для редактирования
-        with open(path, 'r') as f:
-            content = f.read()
-        
-        # Создаем окно редактора
-        edit_window = Toplevel(root)
-        edit_window.title("Редактор файла")
-        
-        # Текстовая область для редактирования
-        text_area = Text(edit_window)
-        text_area.pack(fill=BOTH, expand=True)
-        text_area.insert('1.0', content)
-        
-        # Функция для сохранения изменений
-        def save_changes():
-            new_content = text_area.get('1.0', END)
-            with open(path, 'w') as f:
-                f.write(new_content)
-            messagebox.showinfo("Сохранение файла", "Изменения успешно сохранены.")
-            edit_window.destroy()
-        
-        # Кнопка для сохранения изменений
-        save_btn = Button(edit_window, text="Сохранить", command=save_changes)
-        save_btn.pack(fill=X)
-
-
-
-edit_btn = Button(operations_frame, text="Редактировать файл", command=edit_file)
-edit_btn.pack(side=LEFT, fill=X, expand=True, padx=10)
-
-
-from tkinter import *
-
-root = Tk()
-
-# Получаем размеры экрана
-screen_width = root.winfo_screenwidth()
-screen_height = root.winfo_screenheight()
-
-# Устанавливаем размеры окна на весь экран
-root.geometry(f"{screen_width}x{screen_height}+0+0")
-
-# Запускаем цикл обработки событий
 root.mainloop()

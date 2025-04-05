@@ -1,95 +1,12 @@
-import json
-import os
-import shutil
+import socket
 
-def execute_commands(json_file):
-    with open(json_file, 'r') as f:
-        commands = json.load(f)
-    
-    for command, args in commands.items():
-        if command == 'create_file':
-            # Создание файла
-            file_path = args['path']
-            try:
-                if not os.path.exists(file_path):
-                    with open(file_path, 'w') as f:
-                        pass
-                    print(f"Файл {file_path} создан успешно.")
-                else:
-                    print(f"Файл {file_path} уже существует.")
-            except Exception as e:
-                print(f"Ошибка создания файла {file_path}: {e}")
-        
-        elif command == 'delete_file':
-            # Удаление файла
-            file_path = args['path']
-            try:
-                if os.path.exists(file_path):
-                    os.remove(file_path)
-                    print(f"Файл {file_path} удален успешно.")
-                else:
-                    print(f"Файл {file_path} не найден.")
-            except Exception as e:
-                print(f"Ошибка удаления файла {file_path}: {e}")
-        
-        elif command == 'copy_file':
-            # Копирование файла
-            src_path = args['source']
-            dst_path = args['destination']
-            try:
-                if os.path.exists(src_path):
-                    shutil.copy(src_path, dst_path)
-                    print(f"Файл {src_path} скопирован в {dst_path} успешно.")
-                else:
-                    print(f"Файл {src_path} не найден.")
-            except Exception as e:
-                print(f"Ошибка копирования файла {src_path}: {e}")
-        
-        elif command == 'move_file':
-            # Перемещение файла
-            src_path = args['source']
-            dst_path = args['destination']
-            try:
-                if os.path.exists(src_path):
-                    shutil.move(src_path, dst_path)
-                    print(f"Файл {src_path} перемещен в {dst_path} успешно.")
-                else:
-                    print(f"Файл {src_path} не найден.")
-            except Exception as e:
-                print(f"Ошибка перемещения файла {src_path}: {e}")
-        
-        elif command == 'create_dir':
-            # Создание директории
-            dir_path = args['path']
-            try:
-                if not os.path.exists(dir_path):
-                    os.mkdir(dir_path)
-                    print(f"Директория {dir_path} создана успешно.")
-                else:
-                    print(f"Директория {dir_path} уже существует.")
-            except Exception as e:
-                print(f"Ошибка создания директории {dir_path}: {e}")
-        
-        elif command == 'delete_dir':
-            # Удаление директории
-            dir_path = args['path']
-            try:
-                if os.path.exists(dir_path):
-                    shutil.rmtree(dir_path)
-                    print(f"Директория {dir_path} удалена успешно.")
-                else:
-                    print(f"Директория {dir_path} не найдена.")
-            except Exception as e:
-                print(f"Ошибка удаления директории {dir_path}: {e}")
+HOST = 'localhost'
+PORT = 50007
 
-# Пример файла JSON:
-# {
-#     "create_file": {"path": "example.txt"},
-#     "delete_file": {"path": "example.txt"},
-#     "copy_file": {"source": "example.txt", "destination": "example_copy.txt"},
-#     "move_file": {"source": "example.txt", "destination": "moved_example.txt"},
-#     "create_dir": {"path": "example_dir"},
-#     "delete_dir": {"path": "example_dir"}
-# }
+s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+s.connect((HOST, PORT))
+s.sendall('Hello, world'.encode())
 
-execute_commands('commands.json')
+data = s.recv(1024)
+s.close()
+print('Сообщение сервера: ', repr(data))

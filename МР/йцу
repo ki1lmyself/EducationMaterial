@@ -1,0 +1,28 @@
+def delete_file(path):
+    if os.path.isfile(path):
+        os.remove(path)  # [1][4]
+    else:
+        shutil.rmtree(path)  # [1]
+
+def create_file():
+    with open(filedialog.asksaveasfilename(), 'w') as f:  # [4]
+        pass
+
+
+
+
+def search_files():
+    pattern = os.path.join(current_dir.get(), mask_entry.get())
+    results = glob.glob(pattern, recursive=True)  # [5]
+    
+    # Фильтрация по размеру
+    if size_check.get():
+        results = [f for f in results if 
+                  min_size <= os.path.getsize(f) <= max_size]  # [3][5]
+    
+    # Фильтрация по дате
+    if date_check.get():
+        results = [f for f in results if 
+                  start_date <= datetime.fromtimestamp(os.path.getmtime(f)) <= end_date]  # [5]
+    
+    update_results(results)

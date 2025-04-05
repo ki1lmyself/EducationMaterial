@@ -34,3 +34,11 @@ while True:
     conn.sendall(data)
 
 conn.close()
+
+
+
+реализовать вывод в командной строке полученных данных следующим
+образом "дата и время (адрес клиента): сообщение".
+Для вывода даты и времени использовать следующий код: 
+from datetime import datetime
+datetime.strftime(datetime.now(), "%Y.%m.%d %H:%M:%S")

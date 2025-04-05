@@ -11,9 +11,12 @@ def execute_commands(json_file):
             # Создание файла
             file_path = args['path']
             try:
-                with open(file_path, 'w') as f:
-                    pass
-                print(f"Файл {file_path} создан успешно.")
+                if not os.path.exists(file_path):
+                    with open(file_path, 'w') as f:
+                        pass
+                    print(f"Файл {file_path} создан успешно.")
+                else:
+                    print(f"Файл {file_path} уже существует.")
             except Exception as e:
                 print(f"Ошибка создания файла {file_path}: {e}")
         
@@ -21,8 +24,11 @@ def execute_commands(json_file):
             # Удаление файла
             file_path = args['path']
             try:
-                os.remove(file_path)
-                print(f"Файл {file_path} удален успешно.")
+                if os.path.exists(file_path):
+                    os.remove(file_path)
+                    print(f"Файл {file_path} удален успешно.")
+                else:
+                    print(f"Файл {file_path} не найден.")
             except Exception as e:
                 print(f"Ошибка удаления файла {file_path}: {e}")
         
@@ -31,8 +37,11 @@ def execute_commands(json_file):
             src_path = args['source']
             dst_path = args['destination']
             try:
-                shutil.copy(src_path, dst_path)
-                print(f"Файл {src_path} скопирован в {dst_path} успешно.")
+                if os.path.exists(src_path):
+                    shutil.copy(src_path, dst_path)
+                    print(f"Файл {src_path} скопирован в {dst_path} успешно.")
+                else:
+                    print(f"Файл {src_path} не найден.")
             except Exception as e:
                 print(f"Ошибка копирования файла {src_path}: {e}")
         
@@ -41,8 +50,11 @@ def execute_commands(json_file):
             src_path = args['source']
             dst_path = args['destination']
             try:
-                shutil.move(src_path, dst_path)
-                print(f"Файл {src_path} перемещен в {dst_path} успешно.")
+                if os.path.exists(src_path):
+                    shutil.move(src_path, dst_path)
+                    print(f"Файл {src_path} перемещен в {dst_path} успешно.")
+                else:
+                    print(f"Файл {src_path} не найден.")
             except Exception as e:
                 print(f"Ошибка перемещения файла {src_path}: {e}")
         
@@ -50,8 +62,11 @@ def execute_commands(json_file):
             # Создание директории
             dir_path = args['path']
             try:
-                os.mkdir(dir_path)
-                print(f"Директория {dir_path} создана успешно.")
+                if not os.path.exists(dir_path):
+                    os.mkdir(dir_path)
+                    print(f"Директория {dir_path} создана успешно.")
+                else:
+                    print(f"Директория {dir_path} уже существует.")
             except Exception as e:
                 print(f"Ошибка создания директории {dir_path}: {e}")
         
@@ -59,8 +74,11 @@ def execute_commands(json_file):
             # Удаление директории
             dir_path = args['path']
             try:
-                shutil.rmtree(dir_path)
-                print(f"Директория {dir_path} удалена успешно.")
+                if os.path.exists(dir_path):
+                    shutil.rmtree(dir_path)
+                    print(f"Директория {dir_path} удалена успешно.")
+                else:
+                    print(f"Директория {dir_path} не найдена.")
             except Exception as e:
                 print(f"Ошибка удаления директории {dir_path}: {e}")
 

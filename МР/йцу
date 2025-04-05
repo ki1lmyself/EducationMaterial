@@ -181,3 +181,18 @@ def edit_file():
 
 edit_btn = Button(operations_frame, text="Редактировать файл", command=edit_file)
 edit_btn.pack(side=LEFT, fill=X, expand=True, padx=10)
+
+
+from tkinter import *
+
+root = Tk()
+
+# Получаем размеры экрана
+screen_width = root.winfo_screenwidth()
+screen_height = root.winfo_screenheight()
+
+# Устанавливаем размеры окна на весь экран
+root.geometry(f"{screen_width}x{screen_height}+0+0")
+
+# Запускаем цикл обработки событий
+root.mainloop()

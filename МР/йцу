@@ -146,3 +146,38 @@ result_tree.heading("Modified", text="Дата изменения")
 result_tree.pack(fill=BOTH, expand=True)
 
 root.mainloop()
+
+
+
+def edit_file():
+    path = filedialog.askopenfilename()
+    if path:
+        # Открываем файл для редактирования
+        with open(path, 'r') as f:
+            content = f.read()
+        
+        # Создаем окно редактора
+        edit_window = Toplevel(root)
+        edit_window.title("Редактор файла")
+        
+        # Текстовая область для редактирования
+        text_area = Text(edit_window)
+        text_area.pack(fill=BOTH, expand=True)
+        text_area.insert('1.0', content)
+        
+        # Функция для сохранения изменений
+        def save_changes():
+            new_content = text_area.get('1.0', END)
+            with open(path, 'w') as f:
+                f.write(new_content)
+            messagebox.showinfo("Сохранение файла", "Изменения успешно сохранены.")
+            edit_window.destroy()
+        
+        # Кнопка для сохранения изменений
+        save_btn = Button(edit_window, text="Сохранить", command=save_changes)
+        save_btn.pack(fill=X)
+
+
+
+edit_btn = Button(operations_frame, text="Редактировать файл", command=edit_file)
+edit_btn.pack(side=LEFT, fill=X, expand=True, padx=10)

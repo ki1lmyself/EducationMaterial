@@ -6,6 +6,7 @@ from tkinter.ttk import Treeview
 processes = []
 
 def run_program():
+    global program_entry
     program_path = program_entry.get()
     if program_path:
         try:
@@ -26,8 +27,8 @@ def update_process_list():
     for item in process_tree.get_children():
         process_tree.delete(item)
 
-    for process in processes:
-        process_tree.insert('', 'end', values=(process,))
+    for i, process in enumerate(processes):
+        process_tree.insert('', 'end', values=(i, process))
 
 root = Tk()
 root.title("Диспетчер задач")

@@ -26,3 +26,19 @@ def search_files():
                   start_date <= datetime.fromtimestamp(os.path.getmtime(f)) <= end_date]  # [5]
     
     update_results(results)
+
+
+
+
+root = Tk()
+root.title("Advanced File Manager")
+root.geometry("800x600")
+
+# Панель навигации
+path_frame = Frame(root)
+path_entry = Entry(path_frame, width=50)
+browse_btn = Button(path_frame, text="Обзор", command=select_directory)
+
+# Область вывода результатов
+result_tree = ttk.Treeview(root, columns=("Name", "Size", "Modified"), show="headings")
+

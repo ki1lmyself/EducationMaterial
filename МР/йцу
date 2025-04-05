@@ -1,44 +1,10 @@
-import socket
-
-HOST = 'localhost'
-PORT = 50007
-
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.connect((HOST, PORT))
-s.sendall('Hello, world'.encode())
-
-data = s.recv(1024)
-s.close()
-print('Сообщение сервера: ', repr(data))
-
-
-
-import socket
-
-HOST = ''
-PORT = 50007
-
-s = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
-s.bind((HOST, PORT))
-s.listen(1)
-
-conn, addr = s.accept()
-print('Подключен клиент: ', addr)
-
-while True:
-    data = conn.recv(1024)
-
-    if not data:
-        break
-    print('Получено сообщение:', data.decode('utf-8'))
-    conn.sendall(data)
-
-conn.close()
-
-
-
-реализовать вывод в командной строке полученных данных следующим
-образом "дата и время (адрес клиента): сообщение".
-Для вывода даты и времени использовать следующий код: 
-from datetime import datetime
-datetime.strftime(datetime.now(), "%Y.%m.%d %H:%M:%S")
+Изменить код клиента следующим образом:
+- при запуске клиента запрашивать логин и отправлять его на сервер при
+подключении;
+- в бесконечном цикле запрашивать у пользователя ввод сообщения и
+отправлять логин и сообщение серверу.
+5.3.2 Изменить код сервера следующим образом: 
+- при подключении клиента должно выводиться сообщение «подключился
+логин» (логин д.б. тот, что указал клиент при подключении);
+- реализовать вывод в командной строке полученных данных следующим
+образом "дата и время логин: сообщение"

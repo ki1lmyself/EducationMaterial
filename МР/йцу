@@ -1,34 +1,72 @@
-def delete_file(path):
-    if os.path.isfile(path):
-        os.remove(path)  # [1][4]
-    else:
-        shutil.rmtree(path)  # [1]
+from tkinter import *
+from tkinter import ttk, filedialog, messagebox
+import os, shutil, glob, datetime
+
+def select_directory():
+    path = filedialog.askdirectory()
+    path_entry.delete(0, END)
+    path_entry.insert(0, path)
 
 def create_file():
-    with open(filedialog.asksaveasfilename(), 'w') as f:  # [4]
-        pass
+    path = filedialog.asksaveasfilename()
+    if path:
+        with open(path, 'w') as f:
+            pass
+        messagebox.showinfo("Создание файла", "Файл успешно создан.")
 
-
-
+def delete_file():
+    path = filedialog.askopenfilename()
+    if path:
+        if os.path.isfile(path):
+            os.remove(path)
+        else:
+            shutil.rmtree(path)
+        messagebox.showinfo("Удаление файла", "Файл успешно удален.")
 
 def search_files():
-    pattern = os.path.join(current_dir.get(), mask_entry.get())
-    results = glob.glob(pattern, recursive=True)  # [5]
+    current_dir = path_entry.get()
+    mask = mask_entry.get()
+    min_size = int(min_size_entry.get()) if min_size_entry.get() else 0
+    max_size = int(max_size_entry.get()) if max_size_entry.get() else float('inf')
+    start_date_str = start_date_entry.get()
+    end_date_str = end_date_entry.get()
     
-    # Фильтрация по размеру
-    if size_check.get():
-        results = [f for f in results if 
-                  min_size <= os.path.getsize(f) <= max_size]  # [3][5]
+    results = []
     
-    # Фильтрация по дате
-    if date_check.get():
-        results = [f for f in results if 
-                  start_date <= datetime.fromtimestamp(os.path.getmtime(f)) <= end_date]  # [5]
+    for root_dir, dirs, files in os.walk(current_dir):
+        for file in files:
+            file_path = os.path.join(root_dir, file)
+            if mask and not file.endswith(mask):
+                continue
+            
+            file_size = os.path.getsize(file_path)
+            if min_size <= file_size <= max_size:
+                file_mtime = datetime.datetime.fromtimestamp(os.path.getmtime(file_path))
+                if start_date_str and end_date_str:
+                    start_date = datetime.datetime.strptime(start_date_str, "%Y-%m-%d")
+                    end_date = datetime.datetime.strptime(end_date_str, "%Y-%m-%d")
+                    if start_date <= file_mtime <= end_date:
+                        results.append((file, file_size, file_mtime))
+                else:
+                    results.append((file, file_size, file_mtime))
+            elif not min_size and not max_size:
+                file_mtime = datetime.datetime.fromtimestamp(os.path.getmtime(file_path))
+                if start_date_str and end_date_str:
+                    start_date = datetime.datetime.strptime(start_date_str, "%Y-%m-%d")
+                    end_date = datetime.datetime.strptime(end_date_str, "%Y-%m-%d")
+                    if start_date <= file_mtime <= end_date:
+                        results.append((file, file_size, file_mtime))
+                else:
+                    results.append((file, file_size, file_mtime))
     
     update_results(results)
 
-
-
+def update_results(results):
+    for item in result_tree.get_children():
+        result_tree.delete(item)
+    
+    for file_info in results:
+        result_tree.insert('', 'end', values=file_info)
 
 root = Tk()
 root.title("Advanced File Manager")
@@ -36,9 +74,75 @@ root.geometry("800x600")
 
 # Панель навигации
 path_frame = Frame(root)
+path_frame.pack(fill=X, padx=10, pady=10)
+
+path_label = Label(path_frame, text="Путь:")
+path_label.pack(side=LEFT)
+
 path_entry = Entry(path_frame, width=50)
+path_entry.pack(side=LEFT, fill=X, expand=True)
+
 browse_btn = Button(path_frame, text="Обзор", command=select_directory)
+browse_btn.pack(side=LEFT, padx=10)
+
+# Кнопки операций с файлами
+operations_frame = Frame(root)
+operations_frame.pack(fill=X, padx=10, pady=10)
+
+create_btn = Button(operations_frame, text="Создать файл", command=create_file)
+create_btn.pack(side=LEFT, fill=X, expand=True)
+
+delete_btn = Button(operations_frame, text="Удалить файл", command=delete_file)
+delete_btn.pack(side=LEFT, fill=X, expand=True, padx=10)
+
+# Панель поиска
+search_frame = Frame(root)
+search_frame.pack(fill=X, padx=10, pady=10)
+
+mask_label = Label(search_frame, text="Маска:")
+mask_label.pack(side=LEFT)
+
+mask_entry = Entry(search_frame, width=10)
+mask_entry.pack(side=LEFT)
+
+min_size_label = Label(search_frame, text="Мин. размер:")
+min_size_label.pack(side=LEFT)
+
+min_size_entry = Entry(search_frame, width=5)
+min_size_entry.pack(side=LEFT)
+
+max_size_label = Label(search_frame, text="Макс. размер:")
+max_size_label.pack(side=LEFT)
+
+max_size_entry = Entry(search_frame, width=5)
+max_size_entry.pack(side=LEFT)
+
+start_date_label = Label(search_frame, text="Дата с:")
+start_date_label.pack(side=LEFT)
+
+start_date_entry = Entry(search_frame, width=10)
+start_date_entry.pack(side=LEFT)
+
+end_date_label = Label(search_frame, text="Дата по:")
+end_date_label.pack(side=LEFT)
+
+end_date_entry = Entry(search_frame, width=10)
+end_date_entry.pack(side=LEFT)
+
+search_btn = Button(search_frame, text="Поиск", command=search_files)
+search_btn.pack(side=LEFT, padx=10)
 
 # Область вывода результатов
-result_tree = ttk.Treeview(root, columns=("Name", "Size", "Modified"), show="headings")
+result_frame = Frame(root)
+result_frame.pack(fill=BOTH, expand=True, padx=10, pady=10)
 
+result_tree = ttk.Treeview(result_frame, columns=("Name", "Size", "Modified"), show="headings")
+result_tree.column("Name", width=200)
+result_tree.column("Size", width=100)
+result_tree.column("Modified", width=200)
+result_tree.heading("Name", text="Имя файла")
+result_tree.heading("Size", text="Размер")
+result_tree.heading("Modified", text="Дата изменения")
+result_tree.pack(fill=BOTH, expand=True)
+
+root.mainloop()

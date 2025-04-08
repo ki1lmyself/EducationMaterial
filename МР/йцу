@@ -1,61 +1,34 @@
-5.1 ViewLocator 
-5.1.1 Создайте в корне проекта класс со следующим содержимым:
-public class ViewLocator : IDataTemplate
-{
-	public bool SupportsRecycling => false;
-	public Control Build(object data)
-	{
-		var name =
-		data.GetType().FullName
-			.Replace("ViewModel", "View");
-		var type = Type.GetType(name);
-		if (type != null)
-		{
-			return (Control)Activator
-				.CreateInstance(type);
-		}
-		else
-		{
-			return new TextBlock 
-				{ Text = "Not Found: " + name };
-		}
-	}
-	public bool Match(object data)
-	{
-		return data is ViewModelBase;
-	}
-}
-5.1.2 Добавить в App.axaml следующие строчки:
-<Application
-	xmlns:local=”using:ИмяПроекта”
-	…
-	/>
+5.1 Отображение списков
+5.1.1 Разработать класс User, в котором определить свойства Login и Password
+5.1.2 Добавить в приложение новую страницу для отображения списка пользователей UserListView и UserListViewModel для нее. 
+5.1.3 На странице расположите элемент управления ListBox, привяжите его ItemsSource к свойству ObservableCollection<User> Users (создайте это свойство во UserListViewModel и заполните тестовым набором значений)
 
-<Application.DataTemplates>
-	<local:ViewLocator/>
-</Application.DataTemplates>
-ViewLocator позволяет автоматически создавать объект View для объекта ViewModel в приложении
+5.2 Шаблоны элементов списка
+5.2.1 Определите шаблон для элементов списка: в строке отображайте логин, пароль и кнопку «Удалить»
+5.2.2 Определите привязки для элементов управления. Внутри списка для каждого его элемента контекстом привязки будет являться объект User.
+5.2.3 Для привязки кнопки «Удалить» необходимо указать более сложный путь привязки через родительский элемент:
+{Binding $parent[UserControl].DataContext.DeleteCommand}
+Таким образом будет осуществлена привязка данных к контексту данных страницы.
+5.2.4 При нажатии пользователем на кнопку запись User должна удаляться из списка
 
-5.2 Переходы между страницами
-5.2.1 В MainViewModel создайте ObservableProperty поле сurrentPage типа ViewModelBase
-5.2.2 Создайте 2 страницы RegistrationView и AuthorizationView, расположите на них соответствующие элементы управления
-5.2.3 В MainWindow создайте элемент управления ContentControl и выполните привязку его свойства Content к значению CurrentPage
-5.2.4 Создайте в MainWindow две кнопки, создайте и привяжите к ним команды которые будут присваивать CurrentPage соответствующее значение (RegistrationViewModel или AuthorizationViewModel)
-5.2.5 Протестируйте преходы между страницами
+5.3 Добавление элементов в список
+5.3.1 Добавить на страницу кнопку Добавить и поля ввода для указания логина и пароля. 
+5.3.2 Реализовать вставку нового пользователя в список. Данные нового пользователя брать из полей ввода. 
 
-5.3 Сервис навигиции
-5.3.1 Создайте новый класс NavigationService
-5.3.2 В классе определите навигационный стек в виде Stack<ViewModelBase> и 2 метода для управления этим стеком: универсальный NavigateTo<T>, где T – класс-наследник ViewModelBase и GoBack
-public void NavigateTo<T>(T viewModel, Action<T>? action = null) where T : ViewModelBase
-{
-    //TODO
-}
+5.4 Работа с DataGrid
+5.4.1 Добавить в проект nuget-пакет Avalonia.Controls.DataGrid
+5.4.2 В файле App.axaml в раздел Application.Styles добавить 
+<StyleInclude 
+	Source="avares://Avalonia.Controls.DataGrid/Themes/Fluent.xaml"/>
+5.4.3 Добавить на страницу элемент DataGrid, привязать к нему список пользователей
+5.4.4 Настроить отображение колонок с информацией о пользователе 
+<DataGrid.Columns>
+     <DataGridTextColumn Header="Логин" Binding="{Binding Login}"/>
+     ...
+</DataGrid.Columns>
+5.4.5 Добавить колонку с кнопкой «Удалить» при помощи DataGridTemplateColumn
+5.4.6 Протестировать работу свойств DataGrid
+CanUserReorderColumns="True"
+CanUserResizeColumns="True"
+CanUserSortColumns="True"
 
-public void GoBack(int steps = 1)
-{
-    //TODO
-}
-5.3.3 При выполнении навигации в метод может передаваться делегат Action<T>, который позволит произвести настройки для страницы (установить значения некоторых свойств). Для вызова делегата необходимо выполнить
-action?.Invoke(viewModel);
-5.3.4 Добавьте экземпляр сервиса в качестве статического публичного члена в MainViewModel 
-5.3.5 Измените реализацию навигации в приложении с использованием созданного сервиса.

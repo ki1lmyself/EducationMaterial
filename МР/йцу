@@ -1,54 +1,61 @@
-import subprocess
-import os
-import platform
+5.1 ViewLocator 
+5.1.1 Создайте в корне проекта класс со следующим содержимым:
+public class ViewLocator : IDataTemplate
+{
+	public bool SupportsRecycling => false;
+	public Control Build(object data)
+	{
+		var name =
+		data.GetType().FullName
+			.Replace("ViewModel", "View");
+		var type = Type.GetType(name);
+		if (type != null)
+		{
+			return (Control)Activator
+				.CreateInstance(type);
+		}
+		else
+		{
+			return new TextBlock 
+				{ Text = "Not Found: " + name };
+		}
+	}
+	public bool Match(object data)
+	{
+		return data is ViewModelBase;
+	}
+}
+5.1.2 Добавить в App.axaml следующие строчки:
+<Application
+	xmlns:local=”using:ИмяПроекта”
+	…
+	/>
 
-def list_processes():
-    """Выводит список процессов."""
-    if platform.system() == 'Windows':
-        subprocess.run(['tasklist'])
-    elif platform.system() == 'Linux':
-        subprocess.run(['ps', '-ef'])
-    elif platform.system() == 'Darwin':  # MacOS
-        subprocess.run(['ps', '-ef'])
+<Application.DataTemplates>
+	<local:ViewLocator/>
+</Application.DataTemplates>
+ViewLocator позволяет автоматически создавать объект View для объекта ViewModel в приложении
 
-def run_program(program_path):
-    """Запускает программу."""
-    try:
-        subprocess.Popen(program_path)
-        print(f"Программа '{program_path}' запущена.")
-    except Exception as e:
-        print(f"Ошибка запуска программы: {e}")
+5.2 Переходы между страницами
+5.2.1 В MainViewModel создайте ObservableProperty поле сurrentPage типа ViewModelBase
+5.2.2 Создайте 2 страницы RegistrationView и AuthorizationView, расположите на них соответствующие элементы управления
+5.2.3 В MainWindow создайте элемент управления ContentControl и выполните привязку его свойства Content к значению CurrentPage
+5.2.4 Создайте в MainWindow две кнопки, создайте и привяжите к ним команды которые будут присваивать CurrentPage соответствующее значение (RegistrationViewModel или AuthorizationViewModel)
+5.2.5 Протестируйте преходы между страницами
 
-def terminate_program(pid):
-    """Принудительно завершает процесс по PID."""
-    if platform.system() == 'Windows':
-        subprocess.run(['taskkill', '/pid', str(pid), '/f'])
-    elif platform.system() == 'Linux' or platform.system() == 'Darwin':
-        subprocess.run(['kill', '-9', str(pid)])
-    print(f"Процесс с PID {pid} завершен.")
+5.3 Сервис навигиции
+5.3.1 Создайте новый класс NavigationService
+5.3.2 В классе определите навигационный стек в виде Stack<ViewModelBase> и 2 метода для управления этим стеком: универсальный NavigateTo<T>, где T – класс-наследник ViewModelBase и GoBack
+public void NavigateTo<T>(T viewModel, Action<T>? action = null) where T : ViewModelBase
+{
+    //TODO
+}
 
-def main():
-    while True:
-        print("\nМеню диспетчера задач:")
-        print("1. Вывести список процессов")
-        print("2. Запустить программу")
-        print("3. Завершить процесс")
-        print("4. Выход")
-        
-        choice = input("Выберите действие: ")
-        
-        if choice == "1":
-            list_processes()
-        elif choice == "2":
-            program_path = input("Введите путь к программе: ")
-            run_program(program_path)
-        elif choice == "3":
-            pid = int(input("Введите PID процесса для завершения: "))
-            terminate_program(pid)
-        elif choice == "4":
-            break
-        else:
-            print("Недопустимый выбор. Пожалуйста, выберите действие из меню.")
-
-if __name__ == "__main__":
-    main()
+public void GoBack(int steps = 1)
+{
+    //TODO
+}
+5.3.3 При выполнении навигации в метод может передаваться делегат Action<T>, который позволит произвести настройки для страницы (установить значения некоторых свойств). Для вызова делегата необходимо выполнить
+action?.Invoke(viewModel);
+5.3.4 Добавьте экземпляр сервиса в качестве статического публичного члена в MainViewModel 
+5.3.5 Измените реализацию навигации в приложении с использованием созданного сервиса.

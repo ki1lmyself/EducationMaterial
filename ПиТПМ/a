@@ -1,0 +1,52 @@
+using System;
+using System.Drawing;
+using System.IO;
+
+class Program
+{
+    static void Main(string[] args)
+    {
+        if (args.Length != 2)
+        {
+            Console.WriteLine("Использование: InvertImages.exe <input_folder> <output_folder>");
+            return;
+        }
+
+        string inputFolder = args[0];
+        string outputFolder = args[1];
+        Directory.CreateDirectory(outputFolder);
+
+        foreach (string file in Directory.GetFiles(inputFolder))
+        {
+            try
+            {
+                using (Bitmap bmp = new Bitmap(file))
+                {
+                    for (int y = 0; y < bmp.Height; y++)
+                    {
+                        for (int x = 0; x < bmp.Width; x++)
+                        {
+                            Color pixel = bmp.GetPixel(x, y);
+                            Color inverted = Color.FromArgb(
+                                pixel.A,
+                                255 - pixel.R,
+                                255 - pixel.G,
+                                255 - pixel.B
+                            );
+                            bmp.SetPixel(x, y, inverted);
+                        }
+                    }
+
+                    string outputPath = Path.Combine(outputFolder, Path.GetFileName(file));
+                    bmp.Save(outputPath);
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при обработке файла {file}: {ex.Message}");
+            }
+        }
+
+        Console.WriteLine("Готово!");
+    }
+}

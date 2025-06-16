@@ -276,3 +276,67 @@ static void Main(string[] args)
 
     // ... (остальной код)
 }
+
+
+
+
+
+// Добавляем этот метод в класс Program
+static void UpdateUsersList()
+{
+    usersListView.SetSource(users.ConvertAll(u => u.Login));
+}
+
+// Исправленный метод DeleteUser
+static void DeleteUser()
+{
+    if (usersListView.SelectedItem == -1)
+    {
+        ShowError("Выберите пользователя для удаления");
+        return;
+    }
+
+    var selectedUser = users[usersListView.SelectedItem];
+    
+    var confirm = MessageBox.Query("Подтверждение", 
+        $"Удалить пользователя '{selectedUser.Login}'?", 
+        "Да", "Нет");
+    
+    if (confirm == 0)
+    {
+        users.RemoveAt(usersListView.SelectedItem);
+        UserStorage.SaveUsers(users);
+        UpdateUsersList(); // Теперь этот метод существует
+        MessageBox.Query("Успех", "Пользователь удален", "OK");
+    }
+}
+
+// Исправленный метод AddUser (чтобы тоже использовал UpdateUsersList)
+static void AddUser(string login, string password)
+{
+    if (string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(password))
+    {
+        ShowError("Логин и пароль не могут быть пустыми");
+        return;
+    }
+
+    if (users.Exists(u => u.Login.Equals(login, StringComparison.OrdinalIgnoreCase)))
+    {
+        ShowError("Пользователь с таким логином уже существует");
+        return;
+    }
+
+    var (hash, salt) = PasswordHasher.HashPassword(password);
+
+    var newUser = new User
+    {
+        Login = login,
+        PasswordHash = hash,
+        Salt = salt
+    };
+
+    users.Add(newUser);
+    UserStorage.SaveUsers(users);
+    UpdateUsersList(); // Обновляем список после добавления
+    MessageBox.Query("Успех", "Пользователь успешно добавлен", "OK");
+}

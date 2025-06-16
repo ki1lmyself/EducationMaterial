@@ -185,3 +185,94 @@ namespace UserAdminApp
         }
     }
 }
+
+
+// Добавляем в класс Program новые методы:
+
+static void DeleteUser()
+{
+    if (usersListView.SelectedItem == -1)
+    {
+        ShowError("Выберите пользователя для удаления");
+        return;
+    }
+
+    var selectedUser = users[usersListView.SelectedItem];
+    
+    var confirm = MessageBox.Query("Подтверждение", 
+        $"Удалить пользователя '{selectedUser.Login}'?", 
+        "Да", "Нет");
+    
+    if (confirm == 0)
+    {
+        users.RemoveAt(usersListView.SelectedItem);
+        UserStorage.SaveUsers(users);
+        UpdateUsersList();
+        MessageBox.Query("Успех", "Пользователь удален", "OK");
+    }
+}
+
+static void ChangeUserPassword()
+{
+    if (usersListView.SelectedItem == -1)
+    {
+        ShowError("Выберите пользователя для изменения пароля");
+        return;
+    }
+
+    var selectedUser = users[usersListView.SelectedItem];
+    
+    var dialog = new Dialog("Изменение пароля", 50, 6);
+    var passwordLabel = new Label("Новый пароль:") { X = 1, Y = 1 };
+    var passwordText = new TextField("") { X = 1, Y = 2, Width = Dim.Fill() - 2, Secret = true };
+    
+    var okButton = new Button("OK") { X = 10, Y = 4 };
+    okButton.Clicked += () => {
+        if (string.IsNullOrWhiteSpace(passwordText.Text.ToString()))
+        {
+            ShowError("Пароль не может быть пустым");
+            return;
+        }
+        
+        var (hash, salt) = PasswordHasher.HashPassword(passwordText.Text.ToString());
+        selectedUser.PasswordHash = hash;
+        selectedUser.Salt = salt;
+        
+        UserStorage.SaveUsers(users);
+        dialog.Running = false;
+        MessageBox.Query("Успех", "Пароль изменен", "OK");
+    };
+    
+    var cancelButton = new Button("Отмена") { X = 20, Y = 4 };
+    cancelButton.Clicked += () => dialog.Running = false;
+    
+    dialog.Add(passwordLabel, passwordText, okButton, cancelButton);
+    Application.Run(dialog);
+}
+
+// Обновляем метод Main (добавляем кнопки):
+static void Main(string[] args)
+{
+    // ... (предыдущий код)
+
+    var deleteButton = new Button("Удалить пользователя") 
+    { 
+        X = Pos.Right(addButton) + 2,
+        Y = 6,
+        ColorScheme = redScheme
+    };
+    deleteButton.Clicked += DeleteUser;
+
+    var changePasswordButton = new Button("Изменить пароль") 
+    { 
+        X = Pos.Right(deleteButton) + 2,
+        Y = 6,
+        ColorScheme = blueScheme
+    };
+    changePasswordButton.Clicked += ChangeUserPassword;
+
+    // Добавляем кнопки в окно:
+    win.Add(deleteButton, changePasswordButton);
+
+    // ... (остальной код)
+}

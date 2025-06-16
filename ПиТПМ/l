@@ -1,0 +1,314 @@
+using Terminal.Gui;
+
+namespace LabWork29
+{
+    class Program
+    {
+        static List<User> users;
+        static ListView usersListView;
+        private static bool isAdminAuthenticated = false;
+        private static string adminPasswordHash = "";
+        private static string adminSalt = "";
+
+        static void Main(string[] args)
+        {
+            Application.Init();
+            ShowLoginScreen();
+            Application.Run();
+        }
+
+        static void ShowMainSvreen()
+        {
+            users = UserStorage.LoadUsers();
+
+            var top = Application.Top;
+
+            var window = new Window("Панель администратора")
+            {
+                X = 0,
+                Y = 1,
+                Width = Dim.Fill(),
+                Height = Dim.Fill()
+            };
+
+            var loginLabel = new Label("Логин: ") { X = 1, Y = 1 };
+            var loginText = new TextField("") { X = 1, Y = 2, Width = 20 };
+
+            var passwordLabel = new Label("Пароль: ") { X = 1, Y = 3 };
+            var passwordText = new TextField("") { X = 1, Y = 4, Width = 20, Secret = true };
+
+            var addButton = new Button("Добавить пользователя", true)
+            {
+                X = 1,
+                Y = 6,
+            };
+            addButton.Clicked += () => AddUser(loginText.Text.ToString(), passwordText.Text.ToString());
+
+            var deleteButton = new Button("Удалить пользователя")
+            {
+                X = Pos.Right(addButton) + 2,
+                Y = 6
+            };
+            deleteButton.Clicked += DeleteUser;
+
+            var changePasswordButton = new Button("Изменить пароль")
+            {
+                X = Pos.Right(deleteButton) + 2,
+                Y = 6
+            };
+            changePasswordButton.Clicked += ChangeUserPassword;
+
+            var usersLabel = new Label("Пользователи:") { X = 1, Y = 8 };
+            usersListView = new ListView(users.ConvertAll(u => u.Login))
+            {
+                X = 1,
+                Y = 9,
+                Width = Dim.Fill(),
+                Height = Dim.Fill() - 10
+            };
+
+            window.Add(
+                loginLabel,
+                loginText,
+                passwordLabel,
+                passwordText,
+                addButton,
+                deleteButton,
+                changePasswordButton,
+                usersLabel,
+                usersListView
+            );
+
+            top.Add(window);
+        }
+
+        static void ShowLoginScreen()
+        {
+            var top = Application.Top;
+            top.RemoveAll();
+
+            var loginWin = new Window("Авторизация администратора")
+            {
+                X = 0,
+                Y = 0,
+                Width = Dim.Fill(),
+                Height = Dim.Fill()
+            };
+
+            var passwordLabel = new Label("Пароль:") { X = Pos.Center(), Y = Pos.Center() - 1 };
+            var passwordText = new TextField("")
+            {
+                X = Pos.Center(),
+                Y = Pos.Center(),
+                Width = 20,
+                Secret = true
+            };
+
+            var loginButton = new Button("Войти")
+            {
+                X = Pos.Center(),
+                Y = Pos.Center() + 2
+            };
+
+            loginButton.Clicked += () =>
+            {
+                if (PasswordHasher.VerifyPassword(passwordText.Text.ToString(), adminPasswordHash, adminSalt))
+                {
+                    isAdminAuthenticated = true;
+                    ShowAdminPanel();
+                }
+                else
+                {
+                    MessageBox.ErrorQuery("Ошибка", "Неверный пароль", "OK");
+                    passwordText.Text = "";
+                }
+            };
+
+            // Обработка нажатия Enter
+            passwordText.KeyPress += (e) =>
+            {
+                if (e.KeyEvent.Key == Key.Enter)
+                {
+                    loginButton.OnClicked();
+                    e.Handled = true;
+                }
+            };
+
+            loginWin.Add(passwordLabel, passwordText, loginButton);
+            top.Add(loginWin);
+
+            // Устанавливаем фокус на поле ввода пароля
+            passwordText.SetFocus();
+        }
+
+        static void LoadAdminCredentials()
+        {
+            const string adminCredFile = "admin.cred";
+
+            if (File.Exists(adminCredFile))
+            {
+                var data = File.ReadAllText(adminCredFile).Split('|');
+                adminPasswordHash = data[0];
+                adminSalt = data[1];
+            }
+            else
+            {
+                // Создаем дефолтный пароль "admin"
+                var (hash, salt) = PasswordHasher.HashPassword("admin");
+                adminPasswordHash = hash;
+                adminSalt = salt;
+                File.WriteAllText(adminCredFile, $"{hash}|{salt}");
+            }
+        }
+
+        static void ShowAdminPanel()
+        {
+            if (!isAdminAuthenticated)
+            {
+                ShowLoginScreen();
+                return;
+            }
+
+            var top = Application.Top;
+            top.RemoveAll();
+
+            // ... (остальная реализация панели администратора из предыдущих заданий)
+
+            var win = new Window("Панель администратора")
+            {
+                X = 0,
+                Y = 1,
+                Width = Dim.Fill(),
+                Height = Dim.Fill()
+            };
+
+            // Добавляем кнопку выхода
+            var exitButton = new Button("Выход")
+            {
+                X = Pos.AnchorEnd(10),
+                Y = 0
+            };
+            exitButton.Clicked += () =>
+            {
+                isAdminAuthenticated = false;
+                ShowLoginScreen();
+            };
+
+            win.Add(exitButton);
+            top.Add(win);
+        }
+
+        static void SaveAdminCredentials(string newPassword)
+        {
+            const string adminCredFile = "admin.cred";
+            var (hash, salt) = PasswordHasher.HashPassword(newPassword);
+            adminPasswordHash = hash;
+            adminSalt = salt;
+            File.WriteAllText(adminCredFile, $"{hash}|{salt}");
+        }
+
+        static void UpdateUsersList()
+        {
+            usersListView.SetSource(users.ConvertAll(u => u.Login));
+        }
+
+        static void AddUser(string login, string password)
+        {
+            if (string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(password))
+            {
+                ShowError("Логин и пароль не могут быть пустыми");
+                return;
+            }
+
+            if (users.Exists(u => u.Login.Equals(login, StringComparison.OrdinalIgnoreCase)))
+            {
+                ShowError("Пользователь с таким логином уже существует");
+                return;
+            }
+
+            var (hash, salt) = PasswordHasher.HashPassword(password);
+
+            var newUser = new User
+            {
+                Login = login,
+                PasswordHash = hash,
+                Salt = salt
+            };
+
+            users.Add(newUser);
+            UserStorage.SaveUsers(users);
+
+            usersListView.SetSource(users.ConvertAll(u => u.Login));
+
+            MessageBox.Query("Успех", "Пользователь добавлен", "OK");
+        }
+
+        static void DeleteUser()
+        {
+            if (usersListView.SelectedItem == -1)
+            {
+                ShowError("Выберите пользователя для удаления");
+                return;
+            }
+
+            var selectedUser = users[usersListView.SelectedItem];
+
+            var confirm = MessageBox.Query("Подтверждение", $"Удалить пользователя '{selectedUser.Login}'?", "Да", "Нет");
+
+            if (confirm == 0)
+            {
+                users.RemoveAt(usersListView.SelectedItem);
+                UserStorage.SaveUsers(users);
+                UpdateUsersList();
+                MessageBox.Query("Успех", "Пользователь удален", "OK");
+            }
+        }
+
+        static void ChangeUserPassword()
+        {
+            if (usersListView.SelectedItem == -1)
+            {
+                ShowError("Выберите пользователя для изменения пароля");
+                return;
+            }
+
+            var selectedUser = users[usersListView.SelectedItem];
+
+
+            var passwordLabel = new Label("Новый пароль:") { X = 1, Y = 1 };
+            var passwordText = new TextField("") { X = 1, Y = 2, Width = Dim.Fill() - 2, Secret = true };
+
+            var okButton = new Button("OK") { X = Pos.Center() - 10, Y = 4 };
+            var cancelButton = new Button("Отмена") { X = Pos.Center() + 2, Y = 4 };
+
+            var dialog = new Dialog("Изменение пароля", 50, 6, cancelButton, okButton);
+
+            okButton.Clicked += () =>
+            {
+                if (string.IsNullOrWhiteSpace(passwordText.Text.ToString()))
+                {
+                    ShowError("Пароль не может быть пустым");
+                    return;
+                }
+
+                var (hash, salt) = PasswordHasher.HashPassword(passwordText.Text.ToString());
+                selectedUser.PasswordHash = hash;
+                selectedUser.Salt = salt;
+
+                UserStorage.SaveUsers(users);
+                dialog.Running = false;
+                MessageBox.Query("Успех", "Пароль изменен", "OK");
+            };
+            cancelButton.Clicked += () => dialog.Running = false;
+
+            dialog.Add(passwordLabel, passwordText, okButton, cancelButton);
+            Application.Run(dialog);
+        }
+
+
+        static void ShowError(string message)
+        {
+            MessageBox.ErrorQuery("Ошибка", message, "OK");
+        }
+    }
+}

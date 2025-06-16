@@ -1,0 +1,158 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Security.Cryptography;
+using Newtonsoft.Json;
+using Terminal.Gui;
+
+namespace UserAdminApp
+{
+    // ... (остальные классы User, UserStorage, PasswordHasher остаются без изменений)
+
+    class Program
+    {
+        // Добавляем переменную для хранения состояния авторизации
+        private static bool isAdminAuthenticated = false;
+        private static string adminPasswordHash = "";
+        private static string adminSalt = "";
+
+        static void Main(string[] args)
+        {
+            Application.Init();
+            
+            // Загружаем или создаем пароль администратора
+            LoadAdminCredentials();
+            
+            // Всегда начинаем с экрана авторизации
+            ShowLoginScreen();
+            
+            Application.Run();
+        }
+
+        static void LoadAdminCredentials()
+        {
+            const string adminCredFile = "admin.cred";
+            
+            if (File.Exists(adminCredFile))
+            {
+                var data = File.ReadAllText(adminCredFile).Split('|');
+                adminPasswordHash = data[0];
+                adminSalt = data[1];
+            }
+            else
+            {
+                // Создаем дефолтный пароль "admin"
+                var (hash, salt) = PasswordHasher.HashPassword("admin");
+                adminPasswordHash = hash;
+                adminSalt = salt;
+                File.WriteAllText(adminCredFile, $"{hash}|{salt}");
+            }
+        }
+
+        static void SaveAdminCredentials(string newPassword)
+        {
+            const string adminCredFile = "admin.cred";
+            var (hash, salt) = PasswordHasher.HashPassword(newPassword);
+            adminPasswordHash = hash;
+            adminSalt = salt;
+            File.WriteAllText(adminCredFile, $"{hash}|{salt}");
+        }
+
+        static void ShowLoginScreen()
+        {
+            var top = Application.Top;
+            top.RemoveAll();
+
+            var loginWin = new Window("Авторизация администратора")
+            {
+                X = 0,
+                Y = 0,
+                Width = Dim.Fill(),
+                Height = Dim.Fill()
+            };
+
+            var passwordLabel = new Label("Пароль:") { X = Pos.Center(), Y = Pos.Center() - 1 };
+            var passwordText = new TextField("") 
+            { 
+                X = Pos.Center(),
+                Y = Pos.Center(),
+                Width = 20,
+                Secret = true
+            };
+
+            var loginButton = new Button("Войти") 
+            { 
+                X = Pos.Center(),
+                Y = Pos.Center() + 2,
+                IsDefault = true
+            };
+
+            loginButton.Clicked += () => 
+            {
+                if (PasswordHasher.VerifyPassword(passwordText.Text.ToString(), adminPasswordHash, adminSalt))
+                {
+                    isAdminAuthenticated = true;
+                    ShowAdminPanel();
+                }
+                else
+                {
+                    MessageBox.ErrorQuery("Ошибка", "Неверный пароль", "OK");
+                    passwordText.Text = "";
+                }
+            };
+
+            // Обработка нажатия Enter
+            passwordText.KeyPress += (e) => 
+            {
+                if (e.KeyEvent.Key == Key.Enter)
+                {
+                    loginButton.OnClicked();
+                    e.Handled = true;
+                }
+            };
+
+            loginWin.Add(passwordLabel, passwordText, loginButton);
+            top.Add(loginWin);
+            
+            // Устанавливаем фокус на поле ввода пароля
+            passwordText.SetFocus();
+        }
+
+        static void ShowAdminPanel()
+        {
+            if (!isAdminAuthenticated)
+            {
+                ShowLoginScreen();
+                return;
+            }
+
+            var top = Application.Top;
+            top.RemoveAll();
+
+            // ... (остальная реализация панели администратора из предыдущих заданий)
+            
+            var win = new Window("Панель администратора")
+            {
+                X = 0,
+                Y = 1,
+                Width = Dim.Fill(),
+                Height = Dim.Fill()
+            };
+
+            // Добавляем кнопку выхода
+            var exitButton = new Button("Выход") 
+            { 
+                X = Pos.AnchorEnd(10),
+                Y = 0
+            };
+            exitButton.Clicked += () => 
+            {
+                isAdminAuthenticated = false;
+                ShowLoginScreen();
+            };
+
+            win.Add(exitButton);
+            top.Add(win);
+        }
+    }
+}

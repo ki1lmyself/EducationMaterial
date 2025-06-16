@@ -1,0 +1,187 @@
+using System;
+using System.Collections.Generic;
+using System.IO;
+using System.Security.Cryptography;
+using Newtonsoft.Json;
+using Terminal.Gui;
+
+namespace UserAdminApp
+{
+    public class User
+    {
+        public string Login { get; set; }
+        public string PasswordHash { get; set; }
+        public string Salt { get; set; }
+    }
+
+    public static class UserStorage
+    {
+        private const string UsersFile = "users.json";
+        
+        public static List<User> LoadUsers()
+        {
+            if (File.Exists(UsersFile))
+            {
+                var json = File.ReadAllText(UsersFile);
+                return JsonConvert.DeserializeObject<List<User>>(json) ?? new List<User>();
+            }
+            return new List<User>();
+        }
+
+        public static void SaveUsers(List<User> users)
+        {
+            var json = JsonConvert.SerializeObject(users, Formatting.Indented);
+            File.WriteAllText(UsersFile, json);
+        }
+    }
+
+    public static class PasswordHasher
+    {
+        public static (string Hash, string Salt) HashPassword(string password)
+        {
+            // Генерация соли
+            byte[] salt = new byte[128 / 8];
+            using (var rng = RandomNumberGenerator.Create())
+            {
+                rng.GetBytes(salt);
+            }
+            string saltString = Convert.ToBase64String(salt);
+
+            // Хеширование пароля
+            string hashed = Convert.ToBase64String(KeyDerivation.Pbkdf2(
+                password: password,
+                salt: salt,
+                prf: KeyDerivationPrf.HMACSHA256,
+                iterationCount: 10000,
+                numBytesRequested: 256 / 8));
+
+            return (hashed, saltString);
+        }
+
+        public static bool VerifyPassword(string password, string hash, string salt)
+        {
+            byte[] saltBytes = Convert.FromBase64String(salt);
+            
+            string hashed = Convert.ToBase64String(KeyDerivation.Pbkdf2(
+                password: password,
+                salt: saltBytes,
+                prf: KeyDerivationPrf.HMACSHA256,
+                iterationCount: 10000,
+                numBytesRequested: 256 / 8));
+
+            return hashed == hash;
+        }
+    }
+
+    class Program
+    {
+        static List<User> users;
+        static ListView usersListView;
+
+        static void Main(string[] args)
+        {
+            Application.Init();
+            
+            // Загрузка пользователей
+            users = UserStorage.LoadUsers();
+
+            // Создание главного окна
+            var top = Application.Top;
+
+            // Главное окно
+            var win = new Window("Панель администратора")
+            {
+                X = 0,
+                Y = 1, // Оставляем место для меню
+                Width = Dim.Fill(),
+                Height = Dim.Fill()
+            };
+
+            // Меню
+            var menu = new MenuBar(new MenuBarItem[] {
+                new MenuBarItem("_Файл", new MenuItem[] {
+                    new MenuItem("_Выход", "", () => Application.RequestStop())
+                }),
+            });
+            top.Add(menu);
+
+            // Поля ввода
+            var loginLabel = new Label("Логин: ") { X = 1, Y = 1 };
+            var loginText = new TextField("") { X = 1, Y = 2, Width = 40 };
+
+            var passwordLabel = new Label("Пароль: ") { X = 1, Y = 3 };
+            var passwordText = new TextField("") { X = 1, Y = 4, Width = 40, Secret = true };
+
+            // Кнопка добавления
+            var addButton = new Button("Добавить пользователя", true)
+            {
+                X = 1,
+                Y = 6,
+            };
+            addButton.Clicked += () => AddUser(loginText.Text.ToString(), passwordText.Text.ToString());
+
+            // Список пользователей
+            var usersLabel = new Label("Зарегистрированные пользователи:") { X = 1, Y = 8 };
+            usersListView = new ListView(users.ConvertAll(u => u.Login))
+            {
+                X = 1,
+                Y = 9,
+                Width = Dim.Fill(),
+                Height = Dim.Fill() - 10
+            };
+
+            // Добавление элементов в окно
+            win.Add(
+                loginLabel, loginText,
+                passwordLabel, passwordText,
+                addButton,
+                usersLabel,
+                usersListView
+            );
+
+            top.Add(win);
+            Application.Run();
+        }
+
+        static void AddUser(string login, string password)
+        {
+            if (string.IsNullOrWhiteSpace(login) || string.IsNullOrWhiteSpace(password))
+            {
+                ShowError("Логин и пароль не могут быть пустыми");
+                return;
+            }
+
+            // Проверка на существующего пользователя
+            if (users.Exists(u => u.Login.Equals(login, StringComparison.OrdinalIgnoreCase)))
+            {
+                ShowError("Пользователь с таким логином уже существует");
+                return;
+            }
+
+            // Хеширование пароля
+            var (hash, salt) = PasswordHasher.HashPassword(password);
+
+            // Создание нового пользователя
+            var newUser = new User
+            {
+                Login = login,
+                PasswordHash = hash,
+                Salt = salt
+            };
+
+            users.Add(newUser);
+            UserStorage.SaveUsers(users);
+            
+            // Обновление списка
+            usersListView.SetSource(users.ConvertAll(u => u.Login));
+            
+            // Оповещение об успехе
+            MessageBox.Query("Успех", "Пользователь успешно добавлен", "OK");
+        }
+
+        static void ShowError(string message)
+        {
+            MessageBox.ErrorQuery("Ошибка", message, "OK");
+        }
+    }
+}

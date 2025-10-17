@@ -1,0 +1,23 @@
+5.1 Реализация поддержки скриптинга
+5.1.1 Создать новый проект оконного приложения
+5.1.2 Установить пакет Microsoft.CodeAnalysis.CSharp.Scripting
+5.1.3 Создать класс Automation который будет содержать набор методов
+доступных для внешнего доступа. Добавьте в класс метод Message, который
+принимает строку и выводит MessageBox пользователю.
+5.1.4 Создать класс ScriptingHost. Данный класс предназначен для
+обработки и выполнения скриптов. Добавить в класс метод для выполнения
+кода скрипта
+public async Task ExecuteAsync(string code)
+{
+await CSharpScript.EvaluateAsync(code, scriptOptions, new
+Automation());
+}
+5.1.5 scriptOptions определить приватным полем и инициализировать в
+конструкторе
+scriptOptions = ScriptOptions.Default
+.WithReferences(AppDomain.CurrentDomain.GetAssemblies())
+.WithImports("System", "System.Collections.Generic",
+"System.Linq");
+5.1.6 Добавить в программу поле ввода для скриптов, и кнопку
+«Выполнить». Реализовать их функциональность.
+5.1.7 Протестировать работу скриптов.
